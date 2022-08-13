@@ -121,5 +121,6 @@ func SearchMails(ctx *gin.Context) {
 func main() {
 	e := gin.Default()
 	e.POST("/mails/search", SearchMails)
+	e.StaticFS("/", http.Dir("./dist"))
 	e.Run(":8080")
 }
