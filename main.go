@@ -11,9 +11,13 @@ import (
 )
 
 const (
-	BASE_URL       = `https://qiye.aliyun.com/alimail/ajax/mail/queryMailList.txt?showFrom=0&fragment=1&offset=%d&length=%d&curIncrementId=0&forceReturnData=1&query={"folderIds":["1"]}&_csrf_token_=%s`
-	TIME_FORMATTER = "2006-01-02 15:04"
-	SUBJECT        = "日报"
+	BASE_URL                   = `https://qiye.aliyun.com/alimail/ajax/mail/queryMailList.txt?showFrom=0&fragment=1&offset=%d&length=%d&curIncrementId=0&forceReturnData=1&query={"folderIds":["1"]}&_csrf_token_=%s`
+	TIME_FORMATTER             = "2006-01-02 15:04"
+	TIME_FORMATTER_Y_M_D       = "2006-01-02"
+	TIME_FORMATTER_Y_M_D_H_M_S = "2006-01-02 15:04:05"
+	SUBJECT                    = "日报"
+
+	STATIC_DIR = "./dist"
 )
 
 var (
@@ -44,8 +48,9 @@ type Result struct {
 }
 
 type ResultResponse struct {
-	Items []Result `json:"items"`
-	Total int      `json:"total"`
+	Items   []Result `json:"items"`
+	Total   int      `json:"total"`
+	FileURL string   `json:"fileURL"`
 }
 
 func postOnce(offset int) (*AliMailResponse, error) {
@@ -108,19 +113,25 @@ func SearchMails(ctx *gin.Context) {
 	results := []Result{}
 	for _, data := range datas {
 		results = append(results, Result{
-			SendAt:  TransMillTimestampToTime(data.TimeStamp).Format(TIME_FORMATTER),
+			SendAt:  TransMillTimestampToTime(data.TimeStamp).Format(TIME_FORMATTER_Y_M_D),
 			Content: ParseAndConcatSingleDayMail(data.Body),
 		})
 	}
+	fileName, err := GenerateXLSX(results)
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, err.Error())
+		return
+	}
 	ctx.JSON(http.StatusOK, ResultResponse{
-		Total: len(results),
-		Items: results,
+		Total:   len(results),
+		Items:   results,
+		FileURL: fileName,
 	})
 }
 
 func main() {
 	e := gin.Default()
 	e.POST("/mails/search", SearchMails)
-	e.StaticFS("/", http.Dir("./dist"))
+	e.StaticFS("/", http.Dir(STATIC_DIR))
 	e.Run(":8080")
 }
