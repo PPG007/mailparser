@@ -6,6 +6,8 @@ EXPOSE 8080
 
 WORKDIR /root
 
+ENV GIN_MODE=release
+
 COPY ./dist /root/dist
 COPY ./mailparser /root/mailparser
 COPY ./template.xlsx /root/template.xlsx
